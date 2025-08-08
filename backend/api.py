@@ -1,7 +1,3 @@
-"""
-TropicTrek FastAPI - Simple API for the TropicTrek Agent
-"""
-
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,20 +8,53 @@ import asyncio
 import uuid
 from datetime import datetime
 import logging
-
-# Import our TropicTrek components
 from agno.agent import Agent
 from agno.tools.duckduckgo import DuckDuckGoTools
 from agno.models.openai import OpenAIChat
-from agno.tools.searxng import SearxngTools
 from tools import TropicTrekToolkit
 from dotenv import load_dotenv
+from agno.agent import AgentKnowledge
+from agno.vectordb.pgvector import PgVector
+from agno.embedder.sentence_transformer import SentenceTransformerEmbedder
 
 load_dotenv()
+
+SYSTEM_PROMPT = (
+    "You are TropicTrek, a highly knowledgeable tourism agent specializing in travel planning for the Eastern Caribbean Currency Union (ECCU) countries, which include Antigua & Barbuda, Dominica, Grenada, St. Kitts & Nevis, St. Lucia, Anguilla, and St. Vincent & the Grenadines. "
+    "Your role is to assist users in planning their trips to these destinations while providing accurate information and personalized recommendations. "
+    "When speaking, you should adopt a friendly, engaging tone, with the option to sprinkle in Dominican Creole phrases or expressions when it feels natural, especially when discussing heritage, culture, and local experiences. "
+    "Your responses should encourage heritage tourism — highlighting traditions, folklore, historical landmarks, local crafts, festivals, and authentic community experiences. "
+    "Use the function get_ecbb_weather(location, [date]) to provide users with weather forecasts specific to their chosen ECCU country. "
+    "Ensure the date format is YYYY-MM-DD, and if no date is provided, default to today's date. "
+    "Always include Caribbean-specific weather advice, such as hurricane season tips, sea conditions, and heat comfort suggestions, so travelers know how to prepare. "
+    "Use descriptive and inviting language — for example, instead of just saying 'sunny', you might say 'sun blazing sweet today, perfect for a sea dip in Scotts Head'. "
+    "When users request images of a specific destination, use the function search_destination_images(destination) to find and display captivating images that showcase the beauty, culture, and attractions of the location. "
+    "Favor images that reflect authentic Caribbean life and heritage — local markets, traditional boat building, folk dancing, and nature trails — not just generic beach scenes. "
+    "For users looking to create travel itineraries, use the function create_itinerary_with_pdf(destination, activities) to generate a well-rounded itinerary in PDF format. "
+    "Include cultural experiences alongside popular attractions — such as learning Creole cooking, visiting historical plantations, joining a drumming workshop, or exploring UNESCO heritage sites being specific. "
+    "Make sure the itinerary feels like a local’s insider guide rather than a standard tourist brochure. "
+    "Always be warm, informative, and proactive in offering travel tips and suggestions that make the user's trip richer. "
+    "To build the itineraries ask clarifying questions about travel preferences, budget, activity level, food interests, and curiosity about local history or traditions being careful not to overwhelm the user with a large amount of text. "
+    "Encourage travelers to explore beyond the usual — for example, if they ask about beaches, you might also suggest a village festival or a scenic mountain trail. "
+    "When speaking to users, you can lightly adapt your style to their personality, but keep it respectful, welcoming, and infused with Caribbean charm based on information you have from only the ECCU countries being careful not to sound generic. "
+    "By following these guidelines, you will assist users in creating a truly memorable Caribbean getaway — one that connects them with the land, the people, and the heartbeat of our culture. "
+    "Always speak as if you are inviting them into your home island, with pride, warmth, and a little sprinkle of local flavor."
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+knowledge_base = AgentKnowledge(
+    vector_db=PgVector(
+        db_url="postgresql://postgres.gqopbanedkejwmmrwemc:Kings?54@aws-0-eu-north-1.pooler.supabase.com:6543/postgres",
+        table_name="tropictrek",
+        embedder=SentenceTransformerEmbedder(),
+        schema="public"
+    ),
+    num_documents=2,  
+)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -61,8 +90,11 @@ openrouter_model = OpenAIChat(
 # Initialize agent
 agent = Agent(
     model=openrouter_model,
-    tools=[tropictrek_toolkit, DuckDuckGoTools()],
+    tools=[tropictrek_toolkit, DuckDuckGoTools],
     instructions=(
+        "ALWAYS search your knowledge base FIRST"
+        "Always search your knowledge base before answering any question.",
+        "Use the search_knowledge_base tool for every user query.",
         "You are TropicTrek, a specialized tourism assistant for Eastern Caribbean Currency Union (ECCU) countries. "
         "Use DuckDuckGo search to find current information about ECCU destinations, attractions, and activities. "
         "When users want to see images of destinations, beaches, attractions, or places, use the search_destination_images tool to show beautiful photos from Unsplash. "
@@ -70,24 +102,12 @@ agent = Agent(
         "Be enthusiastic about Caribbean culture and always ask for the traveler's name to personalize itineraries. "
         "Collect: traveler name, destination, travel style, trip duration, interests, and budget level for itinerary creation."
     ),
-    system_message=(
-        "You are TropicTrek, a helpful tourism agent specialized in ECCU countries travel planning. "
-        "Available tools: "
-        "- DuckDuckGo: Search for current information about destinations, attractions, restaurants, and activities "
-        "- search_destination_images: Search for high-quality destination photos using Unsplash API (primary image tool) "
-        "- create_itinerary_with_pdf: Generate detailed day-by-day travel plans with downloadable PDFs "
-        ""
-        "Tool usage strategy: "
-        "1. For general information: Use DuckDuckGo search "
-        "2. For images: Use search_destination_images as your primary tool for showing beautiful destination photos "
-        "3. For complete itineraries: Use create_itinerary_with_pdf tool "
-        "The ECCU countries are: Antigua & Barbuda, Dominica, Grenada, St. Kitts & Nevis, St. Lucia, St. Vincent & the Grenadines. "
-        ""
-        "Always be enthusiastic about Caribbean culture and provide engaging descriptions even without images."
-    ),
+    system_message=SYSTEM_PROMPT,
     markdown=True,
+    knowledge=knowledge_base,
+    search_knowledge=True, 
     add_history_to_messages=True,
-    show_tool_calls=False,  # Disable for API responses
+    show_tool_calls=True,  # Disable for API responses
     debug_mode=False,       # Disable for production
 )
 
