@@ -1,7 +1,3 @@
-"""
-TropicTrek FastAPI - Simple API for the TropicTrek Agent
-"""
-
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
