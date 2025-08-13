@@ -129,7 +129,7 @@ const ChatInterface: React.FC = () => {
       {/* Main content area - takes remaining space */}
       <div className="flex-1 flex flex-col min-h-0">
         {isEmpty ? (
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col justify-between">
             <EmptyState onPromptSelect={handlePromptSelect} />
           </div>
         ) : (
