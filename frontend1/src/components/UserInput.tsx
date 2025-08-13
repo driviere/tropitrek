@@ -35,8 +35,8 @@ const UserInput: React.FC<{
   };
 
   return (
-    <div className="p-4 bg-white border-t border-gray-20">
-      <div className="relative">
+    <div className="p-4 bg-white border-t border-gray-200 shadow-lg">
+      <div className="relative max-w-4xl mx-auto">
         <textarea
           value={value}
           onChange={handleInputChange}

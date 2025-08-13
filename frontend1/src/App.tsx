@@ -122,24 +122,32 @@ const ChatInterface: React.FC = () => {
         closeButton 
         duration={4000}
       />
+      
+      {/* Fixed Navbar */}
       <Navbar />
 
-      {isEmpty ? (
-        <EmptyState onPromptSelect={handlePromptSelect} />
-      ) : (
-        <ChatMessages 
-          messages={messages} 
-          isLoading={isLoading} 
-          onPdfDownload={handlePdfDownload}
+      {/* Main content area - takes remaining space */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {isEmpty ? (
+          <div className="flex-1 flex flex-col">
+            <EmptyState onPromptSelect={handlePromptSelect} />
+          </div>
+        ) : (
+          <ChatMessages 
+            messages={messages} 
+            isLoading={isLoading} 
+            onPdfDownload={handlePdfDownload}
+          />
+        )}
+        
+        {/* Fixed Input at bottom */}
+        <UserInput
+          onSendMessage={handleSendMessage}
+          disabled={isLoading}
+          value={inputValue}
+          onChange={setInputValue}
         />
-      )}
-
-      <UserInput
-        onSendMessage={handleSendMessage}
-        disabled={isLoading}
-        value={inputValue}
-        onChange={setInputValue}
-      />
+      </div>
 
       <style jsx>{`
         @keyframes slideUp {

@@ -1,4 +1,5 @@
 import { MapPin, Palmtree, Camera, Calendar } from "lucide-react";
+import { useState } from "react";
 
 interface SuggestedPrompt {
   id: string;
@@ -39,62 +40,42 @@ const EmptyState = ({
 }: {
   onPromptSelect: (text: string) => void;
 }) => {
-  const suggestedPrompts: SuggestedPrompt[] = [
-    {
-      id: "1",
-      text: "I want to plan a 4-day adventure trip to St. Lucia",
-      category: "Adventure Travel",
-      icon: <Palmtree className="w-4 h-4 text-green-600" />
-    },
-    {
-      id: "2",
-      text: "Create a romantic getaway itinerary for Grenada",
-      category: "Romantic Travel",
-      icon: <MapPin className="w-4 h-4 text-blue-600" />
-    },
-    {
-      id: "3",
-      text: "Show me the best attractions in Dominica with photos",
-      category: "Sightseeing",
-      icon: <Camera className="w-4 h-4 text-purple-600" />
-    },
-    {
-      id: "4",
-      text: "Plan a budget-friendly trip to Antigua & Barbuda",
-      category: "Budget Travel",
-      icon: <Calendar className="w-4 h-4 text-orange-600" />
-    },
-    {
-      id: "5",
-      text: "I'm interested in cultural experiences in St. Kitts & Nevis",
-      category: "Cultural Tourism",
-      icon: <MapPin className="w-4 h-4 text-red-600" />
-    },
-    {
-      id: "6",
-      text: "What are the best beaches in St. Vincent & the Grenadines?",
-      category: "Beach Tourism",
-      icon: <Palmtree className="w-4 h-4 text-cyan-600" />
-    },
-  ];
+  const suggestedPrompts: SuggestedPrompt[] = [];
+
+  const [videoError, setVideoError] = useState(false);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 animate-fadeIn bg-gradient-to-br from-blue-50 via-white to-green-50">
-      <div className="text-center mb-8">
-        <div className="flex items-center justify-center mb-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-            <Palmtree className="w-8 h-8 text-white" />
-          </div>
+    <div className="flex-1 flex flex-col items-center justify-start pt-8 pb-4 px-8 animate-fadeIn bg-gradient-to-br from-blue-50 via-white to-green-50">
+      <div className="text-center mb-6">
+        <div className="w-[8rem] h-[8rem] mx-auto flex items-center justify-center mb-4">
+          {!videoError ? (
+            <video
+              src="/bot-vid.mp4"
+              className="w-full h-full object-contain"
+              autoPlay
+              loop
+              muted
+              playsInline
+              onError={() => setVideoError(true)}
+            />
+          ) : (
+            <img
+              src="/logo.png"
+              alt="TropicTrek Logo"
+              className="w-full h-full object-contain"
+            />
+          )}
         </div>
-        <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
           Welcome to TropicTrek! 🌴
         </h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Your AI-powered Caribbean travel assistant for the Eastern Caribbean Currency Union (ECCU) countries.
-          Let me help you plan the perfect island adventure!
+        <p className="text-gray-600 max-w-xl mx-auto text-sm">
+          Your AI-powered Caribbean travel assistant for the Eastern Caribbean
+          Currency Union (ECCU) countries. Let me help you plan the perfect
+          island adventure!
         </p>
-        <div className="mt-4 text-sm text-gray-500">
-          <span className="inline-flex items-center space-x-2">
+        <div className="mt-3 text-xs text-gray-500">
+          <span className="inline-flex items-center space-x-1 flex-wrap justify-center">
             <span>🏝️ Antigua & Barbuda</span>
             <span>•</span>
             <span>🌿 Dominica</span>
@@ -120,11 +101,7 @@ const EmptyState = ({
         ))}
       </div>
 
-      <div className="mt-8 text-center">
-        <p className="text-sm text-gray-500">
-          💡 Try asking me about destinations, activities, or say "Create an itinerary" to get a personalized PDF!
-        </p>
-      </div>
+
     </div>
   );
 };

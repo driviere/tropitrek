@@ -11,13 +11,17 @@ import os
 import requests
 from dotenv import load_dotenv
 from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor
+from reportlab.lib import colors
 import datetime
 
 load_dotenv()
+
+# Get OpenWeather API key from environment
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')
 
 
 class TropicTrekToolkit(Toolkit):
@@ -78,7 +82,7 @@ class TropicTrekToolkit(Toolkit):
             )
             
             return f"""
-🌴 **Itinerary Created Successfully!** 🌴
+🌴 **Your {destination.title()} Itinerary is Ready!** 🌴
 
 **Traveler:** {traveler_name}
 **Destination:** {destination.title()}
@@ -86,11 +90,11 @@ class TropicTrekToolkit(Toolkit):
 **Style:** {travel_style}
 **Budget:** {budget.title()}
 
+{itinerary_content}
+
 📄 **PDF Generated:** `{pdf_filename}`
 
-Your personalized travel itinerary is ready! The PDF includes detailed day-by-day planning, local recommendations, and practical travel information.
-
-*Download your complete itinerary PDF to take with you on your adventure!* 🏝️
+Your complete itinerary has been saved as a PDF for easy download and offline access during your trip!
             """
             
         except Exception as e:
@@ -104,18 +108,61 @@ Your personalized travel itinerary is ready! The PDF includes detailed day-by-da
         """Generate detailed itinerary content using OpenRouter LLM with comprehensive system prompt"""
         
         system_prompt = """
-You are an expert travel planner specializing in creating detailed, personalized travel itineraries. Your expertise covers all destinations worldwide, with deep knowledge of local attractions, culture, cuisine, transportation, accommodations, and practical travel information.
+You are an expert travel planner specializing in creating clean, professional travel itineraries for Caribbean destinations. 
 
-When creating itineraries, you must:
+Create itineraries using proper markdown formatting that will look professional both in chat and PDF format.
 
-1. **Create comprehensive day-by-day schedules** with specific times, activities, and locations
-2. **Include practical details** like transportation, costs, opening hours, and booking requirements  
-3. **Provide local insights** including hidden gems, cultural etiquette, and insider tips
-4. **Consider the traveler's profile** - tailor recommendations to their style, interests, and budget
-5. **Include essential information** like currency, language, safety tips, and emergency contacts
-6. **Format for PDF readability** using clear headers, bullet points, and organized sections
+Use this exact markdown structure:
 
-Your itineraries should be engaging, informative, and actionable - something a traveler can actually follow and use during their trip.
+# Travel Itinerary
+
+## Trip Overview
+- **Destination:** [Location]
+- **Duration:** [X] days
+- **Travel Style:** [Style]
+- **Budget:** [Budget Level]
+
+## Day-by-Day Schedule
+
+### Day 1 - Arrival & Exploration
+**Morning (9:00 AM)**
+- Arrive at airport
+- Check into hotel
+- Welcome drink and orientation
+
+**Afternoon (2:00 PM)**
+- Visit local market
+- Traditional lunch at [Restaurant Name]
+- Explore downtown area
+
+**Evening (6:00 PM)**
+- Sunset beach walk
+- Dinner at seaside restaurant
+- Rest and prepare for tomorrow
+
+### Day 2 - Adventure Day
+**Morning (8:00 AM)**
+- Hiking tour to waterfall
+- Guided nature walk
+- Photography opportunities
+
+**Afternoon (1:00 PM)**
+- Lunch at mountain restaurant
+- Swimming at natural pools
+- Return journey
+
+**Evening (5:00 PM)**
+- Return to hotel
+- Relax by pool
+- Dinner at hotel restaurant
+
+## Important Information
+- **Currency:** Eastern Caribbean Dollar (XCD)
+- **Emergency Contact:** [Local number]
+- **Weather:** [Current conditions]
+- **Tips:** [Local customs and advice]
+
+Use this exact format with proper markdown headers, bullet points, and bold text for times and activities.
         """
         
         user_prompt = f"""
@@ -151,82 +198,251 @@ Please create a comprehensive itinerary that this traveler can actually use duri
     async def _create_pdf(
         self, content: str, traveler_name: str, destination: str, days: int, travel_style: str
     ) -> str:
-        """Create a formatted PDF from the itinerary content"""
+        """Create a clean, professional PDF from the itinerary content"""
+        
+        from reportlab.platypus import Table, TableStyle
+        from reportlab.lib import colors
         
         # Generate unique filename
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"TropicTrek_Itinerary_{traveler_name.replace(' ', '_')}_{destination.replace(' ', '_')}_{timestamp}.pdf"
         
-        # Create PDF document
-        doc = SimpleDocTemplate(filename, pagesize=A4)
+        # Create PDF document with margins
+        doc = SimpleDocTemplate(
+            filename, 
+            pagesize=A4,
+            rightMargin=50,
+            leftMargin=50,
+            topMargin=50,
+            bottomMargin=50
+        )
         styles = getSampleStyleSheet()
         story = []
         
-        # Custom styles
+        # Custom styles for professional look
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=24,
-            spaceAfter=30,
-            textColor=HexColor('#2E8B57'),  # Sea Green
-            alignment=1  # Center alignment
+            fontSize=28,
+            spaceAfter=20,
+            textColor=HexColor('#1E3A8A'),  # Professional blue
+            alignment=1,  # Center alignment
+            fontName='Helvetica-Bold'
         )
         
-        header_style = ParagraphStyle(
-            'CustomHeader',
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Normal'],
+            fontSize=14,
+            spaceAfter=30,
+            textColor=HexColor('#6B7280'),  # Gray
+            alignment=1,  # Center alignment
+            fontName='Helvetica'
+        )
+        
+        section_header_style = ParagraphStyle(
+            'SectionHeader',
             parent=styles['Heading2'],
             fontSize=16,
-            spaceAfter=12,
-            textColor=HexColor('#1E90FF'),  # Dodger Blue
+            spaceAfter=15,
+            spaceBefore=20,
+            textColor=HexColor('#1E3A8A'),
+            fontName='Helvetica-Bold',
+            borderWidth=1,
+            borderColor=HexColor('#E5E7EB'),
+            borderPadding=10,
+            backColor=HexColor('#F8FAFC')
         )
         
-        # Title page
-        story.append(Paragraph("🌴 TropicTrek Itinerary 🌴", title_style))
+        info_style = ParagraphStyle(
+            'InfoStyle',
+            parent=styles['Normal'],
+            fontSize=11,
+            spaceAfter=8,
+            fontName='Helvetica'
+        )
+        
+        # Header with logo placeholder and title
+        story.append(Paragraph("Travel Itinerary", title_style))
+        story.append(Paragraph(f"{destination.title()}", subtitle_style))
         story.append(Spacer(1, 20))
         
-        # Trip details
-        trip_details = f"""
-        <b>Traveler:</b> {traveler_name}<br/>
-        <b>Destination:</b> {destination.title()}<br/>
-        <b>Duration:</b> {days} days<br/>
-        <b>Travel Style:</b> {travel_style}<br/>
-        <b>Generated:</b> {datetime.datetime.now().strftime("%B %d, %Y")}<br/>
-        """
-        story.append(Paragraph(trip_details, styles['Normal']))
+        # Traveler Information Table
+        traveler_data = [
+            ['TRAVELER INFORMATION', ''],
+            ['Name of Traveler', traveler_name],
+            ['Destination', destination.title()],
+            ['Duration', f'{days} days'],
+            ['Travel Style', travel_style],
+            ['Generated Date', datetime.datetime.now().strftime("%B %d, %Y")]
+        ]
+        
+        traveler_table = Table(traveler_data, colWidths=[2.5*inch, 3*inch])
+        traveler_table.setStyle(TableStyle([
+            # Header row
+            ('BACKGROUND', (0, 0), (1, 0), HexColor('#1E3A8A')),
+            ('TEXTCOLOR', (0, 0), (1, 0), colors.white),
+            ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (1, 0), 12),
+            ('SPAN', (0, 0), (1, 0)),
+            ('ALIGN', (0, 0), (1, 0), 'CENTER'),
+            
+            # Data rows
+            ('BACKGROUND', (0, 1), (1, -1), HexColor('#F8FAFC')),
+            ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 1), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (1, -1), 10),
+            ('GRID', (0, 0), (1, -1), 1, HexColor('#E5E7EB')),
+            ('VALIGN', (0, 0), (1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (1, -1), 10),
+            ('TOPPADDING', (0, 0), (1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (1, -1), 8),
+        ]))
+        
+        story.append(traveler_table)
         story.append(Spacer(1, 30))
         
-        # Process content and add to PDF
+        # Parse and format the itinerary content
         lines = content.split('\n')
+        current_day = None
+        day_activities = []
+        
         for line in lines:
             line = line.strip()
             if not line:
-                story.append(Spacer(1, 6))
                 continue
                 
-            # Headers (lines starting with ##)
-            if line.startswith('##'):
-                story.append(Paragraph(line.replace('##', '').strip(), header_style))
-            # Subheaders (lines starting with #)
-            elif line.startswith('#'):
-                story.append(Paragraph(line.replace('#', '').strip(), styles['Heading3']))
-            # Bold text (lines starting with **)
-            elif line.startswith('**') and line.endswith('**'):
-                story.append(Paragraph(f"<b>{line[2:-2]}</b>", styles['Normal']))
-            # Regular text
-            else:
-                story.append(Paragraph(line, styles['Normal']))
+            # Main headers (# Travel Itinerary)
+            if line.startswith('# '):
+                continue  # Skip main title as we already have it
+                
+            # Section headers (## Trip Overview, ## Day-by-Day Schedule)
+            elif line.startswith('## '):
+                if day_activities and current_day:
+                    # Create table for previous day
+                    story.append(self._create_day_table(current_day, day_activities))
+                    story.append(Spacer(1, 15))
+                    day_activities = []
+                    
+                section_title = line.replace('## ', '').strip()
+                story.append(Paragraph(section_title, section_header_style))
+                
+            # Day headers (### Day 1 - Arrival & Exploration)
+            elif line.startswith('### '):
+                if day_activities and current_day:
+                    # Create table for previous day
+                    story.append(self._create_day_table(current_day, day_activities))
+                    story.append(Spacer(1, 15))
+                    
+                current_day = line.replace('### ', '').strip()
+                day_activities = []
+                
+            # Time periods (**Morning (9:00 AM)**)
+            elif line.startswith('**') and line.endswith('**') and ('AM' in line or 'PM' in line):
+                time_period = line.replace('**', '').strip()
+                day_activities.append(['TIME_HEADER', time_period])
+                
+            # Activity items (- Activity description)
+            elif line.startswith('- '):
+                activity = line.replace('- ', '').strip()
+                day_activities.append(['ACTIVITY', activity])
+                
+            # Important information bullets
+            elif line.startswith('- **') and line.endswith('**'):
+                info_item = line.replace('- **', '').replace('**', '').strip()
+                story.append(Paragraph(f"• <b>{info_item}</b>", info_style))
+                
+            # Regular bullets
+            elif line.startswith('- '):
+                bullet_text = line.replace('- ', '').strip()
+                story.append(Paragraph(f"• {bullet_text}", info_style))
+        
+        # Add the last day if exists
+        if day_activities and current_day:
+            story.append(self._create_day_table(current_day, day_activities))
         
         # Footer
-        story.append(PageBreak())
-        story.append(Paragraph("🌺 Have an Amazing Caribbean Adventure! 🌺", title_style))
-        story.append(Spacer(1, 20))
-        story.append(Paragraph("Generated by TropicTrek - Your AI Caribbean Travel Assistant", styles['Italic']))
+        story.append(Spacer(1, 40))
+        story.append(Paragraph("Have an Amazing Caribbean Adventure!", title_style))
+        story.append(Spacer(1, 10))
+        story.append(Paragraph("Generated by TropicTrek - Your AI Caribbean Travel Assistant", subtitle_style))
         
         # Build PDF
         doc.build(story)
         
-        logger.info(f"PDF created: {filename}")
+        logger.info(f"Professional PDF created: {filename}")
         return filename
+    
+    def _create_day_table(self, day_title: str, activities: list) -> Table:
+        """Create a professional table for a day's activities with proper text wrapping"""
+        from reportlab.platypus import Table, TableStyle, Paragraph
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet
+        
+        styles = getSampleStyleSheet()
+        
+        # Create custom styles for table content
+        time_style = ParagraphStyle(
+            'TimeStyle',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica-Bold',
+            textColor=HexColor('#1E3A8A'),
+            spaceAfter=0
+        )
+        
+        activity_style = ParagraphStyle(
+            'ActivityStyle',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica',
+            leftIndent=0,
+            spaceAfter=2,
+            leading=11
+        )
+        
+        # Prepare table data with Paragraph objects for proper text wrapping
+        table_data = [
+            [Paragraph(day_title, time_style), '']  # Header row
+        ]
+        
+        current_time = None
+        for activity_type, content in activities:
+            if activity_type == 'TIME_HEADER':
+                current_time = content
+                table_data.append([Paragraph(current_time, time_style), ''])
+            elif activity_type == 'ACTIVITY':
+                if current_time:
+                    # Use Paragraph for proper text wrapping
+                    activity_para = Paragraph(f"• {content}", activity_style)
+                    table_data.append(['', activity_para])
+                else:
+                    activity_para = Paragraph(f"• {content}", activity_style)
+                    table_data.append([Paragraph('Activity', time_style), activity_para])
+        
+        # Create table with optimized column widths for A4 page
+        day_table = Table(table_data, colWidths=[1.3*inch, 4.2*inch])
+        day_table.setStyle(TableStyle([
+            # Header row
+            ('BACKGROUND', (0, 0), (1, 0), HexColor('#1E3A8A')),
+            ('TEXTCOLOR', (0, 0), (1, 0), colors.white),
+            ('FONTNAME', (0, 0), (1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (1, 0), 12),
+            ('SPAN', (0, 0), (1, 0)),
+            ('ALIGN', (0, 0), (1, 0), 'CENTER'),
+            
+            # Time headers and content
+            ('BACKGROUND', (0, 1), (1, -1), HexColor('#F1F5F9')),
+            ('GRID', (0, 0), (1, -1), 1, HexColor('#E2E8F0')),
+            ('VALIGN', (0, 0), (1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (1, -1), 8),
+            ('TOPPADDING', (0, 0), (1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (1, -1), 8),
+        ]))
+        
+        return day_table
 
         
 
@@ -283,14 +499,27 @@ Please create a comprehensive itinerary that this traveler can actually use duri
                 photographer = image['user']['name']
                 photographer_url = image['user']['links']['html']
                 
-                # Add image with markdown format
-                image_response += f"**{i}. {alt_description or query}**\n"
-                image_response += f"![{alt_description or query}]({image_url})\n"
+                # Clean and validate the image URL
+                if not image_url or not image_url.startswith('http'):
+                    logger.error(f"Invalid image URL for image {i}: {image_url}")
+                    continue
+                
+                # Log the image URL for debugging
+                logger.info(f"Image {i} URL: {image_url}")
+                logger.info(f"Image {i} Alt: {alt_description}")
+                
+                # Clean alt text for markdown (remove problematic characters)
+                clean_alt = (alt_description or query).replace('[', '').replace(']', '').replace('(', '').replace(')', '')
+                
+                # Add image with markdown format - ensure proper spacing and formatting
+                image_response += f"**{i}. {clean_alt}**\n\n"
+                image_response += f"![{clean_alt}]({image_url})\n\n"
                 image_response += f"*Photo by [{photographer}]({photographer_url}) on Unsplash*\n\n"
             
             image_response += "✨ *These images should give you a great preview of what to expect at your destination!*"
             
             logger.info(f"Successfully found {len(results)} images for query: {query}")
+            logger.info(f"Image response being returned: {image_response}")
             return image_response
             
         except requests.exceptions.Timeout:
