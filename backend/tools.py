@@ -1,5 +1,4 @@
-from typing import List, Optional
-from agno.agent import Agent
+from typing import List, Optional, Callable
 from agno.tools import Toolkit
 from agno.utils.log import logger
 from openai import OpenAI
@@ -12,8 +11,107 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor
 import datetime
+import speech_recognition as sr
+from gtts import gTTS
+import pygame
+import tempfile
+import threading
+import time
+import asyncio
 
 load_dotenv()
+
+class VoiceAssistant:
+    def __init__(self):
+        """Initialize the voice assistant with default settings"""
+        self.recognizer = sr.Recognizer()
+        self.microphone = sr.Microphone()
+        self.is_listening = False
+        self.stop_listening = None
+        self.on_voice_callback = None
+        self.language = 'en-US'
+        self.voice_temp_dir = tempfile.mkdtemp()
+        pygame.mixer.init()
+        
+        # Adjust for ambient noise automatically
+        with self.microphone as source:
+            self.recognizer.adjust_for_ambient_noise(source, duration=1)
+
+    def set_language(self, language_code: str):
+        """Set the language for both speech recognition and synthesis"""
+        self.language = language_code
+
+    def speak(self, text: str, blocking: bool = False):
+        """Convert text to speech and play it"""
+        try:
+            tts = gTTS(text=text, lang=self.language[:2])
+            temp_file = os.path.join(self.voice_temp_dir, 'temp_voice.mp3')
+            tts.save(temp_file)
+            
+            pygame.mixer.music.load(temp_file)
+            pygame.mixer.music.play()
+            
+            if blocking:
+                while pygame.mixer.music.get_busy():
+                    time.sleep(0.1)
+                    
+        except Exception as e:
+            print(f"Error in speech synthesis: {e}")
+
+    def listen(self, timeout: int = 5, phrase_time_limit: int = 10) -> Optional[str]:
+        """Listen for voice input and return transcribed text"""
+        try:
+            with self.microphone as source:
+                print("Listening...")
+                audio = self.recognizer.listen(
+                    source, 
+                    timeout=timeout,
+                    phrase_time_limit=phrase_time_limit
+                )
+                
+            print("Processing speech...")
+            return self.recognizer.recognize_google(audio, language=self.language)
+        except sr.WaitTimeoutError:
+            print("Listening timed out")
+            return None
+        except sr.UnknownValueError:
+            print("Could not understand audio")
+            return None
+        except Exception as e:
+            print(f"Error in speech recognition: {e}")
+            return None
+
+    def start_continuous_listening(self, callback: Callable[[str], None]):
+        """Start listening continuously in the background"""
+        self.on_voice_callback = callback
+        self.is_listening = True
+        
+        def listen_thread():
+            while self.is_listening:
+                text = self.listen()
+                if text and self.on_voice_callback:
+                    self.on_voice_callback(text)
+        
+        threading.Thread(target=listen_thread, daemon=True).start()
+
+    def stop_continuous_listening(self):
+        """Stop continuous listening"""
+        self.is_listening = False
+
+    def cleanup(self):
+        """Clean up resources"""
+        try:
+            pygame.mixer.quit()
+            for file in os.listdir(self.voice_temp_dir):
+                os.remove(os.path.join(self.voice_temp_dir, file))
+            os.rmdir(self.voice_temp_dir)
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+
+    def __del__(self):
+        """Destructor to ensure cleanup"""
+        self.cleanup()
+
 
 class TropicTrekToolkit(Toolkit):
     def __init__(self, **kwargs):
@@ -22,7 +120,9 @@ class TropicTrekToolkit(Toolkit):
             tools=[
                 self.create_itinerary_with_pdf,
                 self.search_destination_images,
-                self.get_ecbb_weather
+                self.get_ecbb_weather,
+                self.voice_speak,
+                self.voice_listen
             ],
             **kwargs
         )
@@ -32,20 +132,69 @@ class TropicTrekToolkit(Toolkit):
         )
         self.unsplash_access_key = os.getenv('UNSPLASH_ACCESS_KEY')
         self.openweather_api_key = os.getenv('OPENWEATHER_API_KEY')
+        self.voice_assistant = VoiceAssistant()
 
-    async def get_ecbb_weather(self, location: str, target_date: str = None) -> str:
+    async def get_ecbb_weather(self, location: str, date: str = None) -> str:
+        """Get weather for a location with flexible date input"""
         try:
-            url = f"http://api.openweathermap.org/data/2.5/weather?q={location}&appid={self.openweather_api_key}&units=metric"
+            # Handle date specification
+            date_param = ""
+            if date:
+                # Support natural language date formats
+                if "today" in date.lower():
+                    date_param = "&cnt=1"
+                elif "tomorrow" in date.lower():
+                    date_param = "&cnt=2"
+                elif "week" in date.lower() or "7 days" in date.lower():
+                    date_param = "&cnt=7"
+                elif "5 days" in date.lower():
+                    date_param = "&cnt=5"
+                else:
+                    # Try to parse as a specific date
+                    try:
+                        # Attempt to parse various date formats
+                        parsed_date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+                        days_diff = (parsed_date - datetime.date.today()).days
+                        if 0 <= days_diff <= 16:
+                            date_param = f"&cnt={days_diff+1}"
+                        else:
+                            return "Weather forecast is only available for up to 16 days in the future."
+                    except ValueError:
+                        # Handle other natural language formats
+                        return "Please specify a date like 'today', 'tomorrow', 'next Friday', or 'in 5 days'."
+            
+            # Use forecast API
+            url = f"http://api.openweathermap.org/data/2.5/forecast?q={location}&appid={self.openweather_api_key}&units=metric{date_param}"
             response = requests.get(url, timeout=10)
+            
             if response.status_code != 200:
                 return f"Unable to fetch weather for {location}."
+            
             data = response.json()
-            weather_desc = data['weather'][0]['description']
-            temp = data['main']['temp']
-            feels_like = data['main']['feels_like']
-            humidity = data['main']['humidity']
-            wind_speed = data['wind']['speed']
-            return f"Weather in {location}: {weather_desc}, {temp}°C (feels like {feels_like}°C), humidity {humidity}%, wind speed {wind_speed} m/s."
+            
+            # Process current weather if no date specified
+            if not date:
+                weather_desc = data['list'][0]['weather'][0]['description']
+                temp = data['list'][0]['main']['temp']
+                feels_like = data['list'][0]['main']['feels_like']
+                humidity = data['list'][0]['main']['humidity']
+                wind_speed = data['list'][0]['wind']['speed']
+                return f"Current weather in {location}: {weather_desc}, {temp}°C (feels like {feels_like}°C), humidity {humidity}%, wind speed {wind_speed} m/s.\n\nCaribbean Tip: Always check for tropical storm warnings during hurricane season (June-November)."
+            
+            # Process forecast
+            forecast = []
+            for item in data['list']:
+                forecast_time = item['dt_txt']
+                weather_desc = item['weather'][0]['description']
+                temp = item['main']['temp']
+                forecast.append(f"{forecast_time}: {weather_desc}, {temp}°C")
+            
+            return (
+                f"Weather forecast for {location}:\n" +
+                "\n".join(forecast) +
+                "\n\nCaribbean Tip: Always check for tropical storm warnings during hurricane season (June-November)."
+            )
+            
         except Exception as e:
             return f"Error fetching weather: {str(e)}"
 
@@ -209,59 +358,31 @@ Traveler Details:
             data = response.json()
             results = data.get('results', [])
             if not results:
-<<<<<<< HEAD
-                return f"🖼️ No images found for '{query}'. Try a different search term like 'Caribbean beach' or 'tropical island'."
-            
-            # Extract just the image URLs and return them as a simple list
-            image_urls = []
-            image_descriptions = []
-            
-=======
                 return f"🖼️ No images found for '{query}'."
             image_response = f"🖼️ **Here are some beautiful images of {query}:**\n\n"
->>>>>>> 2b9e787fe01b22839e1c9dc9bbc6b0802e2e43c9
             for i, image in enumerate(results[:count], 1):
                 image_url = image['urls']['regular']
                 alt_description = image.get('alt_description', query)
                 photographer = image['user']['name']
-<<<<<<< HEAD
-                
-                # Clean and validate the image URL
-                if not image_url or not image_url.startswith('http'):
-                    logger.error(f"Invalid image URL for image {i}: {image_url}")
-                    continue
-                
-                # Log the image URL for debugging
-                logger.info(f"Image {i} URL: {image_url}")
-                logger.info(f"Image {i} Alt: {alt_description}")
-                
-                image_urls.append(image_url)
-                image_descriptions.append(f"{alt_description} (Photo by {photographer})")
-            
-            # Return a simple response with just the URLs for the agent to use
-            urls_text = "\n".join(image_urls)
-            
-            response = f"Found {len(image_urls)} beautiful images of {query}. Here are the image URLs:\n\n{urls_text}\n\nThese images showcase the natural beauty and attractions of the destination."
-            
-            logger.info(f"Successfully found {len(results)} images for query: {query}")
-            logger.info(f"Returning image URLs to agent: {image_urls}")
-            return response
-            
-        except requests.exceptions.Timeout:
-            logger.error(f"Timeout while searching for images: {query}")
-            return f"🖼️ The image search timed out. Please try again with a simpler search term."
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Request error while searching for images: {e}")
-            return f"🖼️ There was a connection issue while searching for images. Please check your internet connection and try again."
-            
-=======
                 photographer_url = image['user']['links']['html']
                 image_response += f"**{i}. {alt_description or query}**\n"
                 image_response += f"![{alt_description or query}]({image_url})\n"
                 image_response += f"*Photo by [{photographer}]({photographer_url}) on Unsplash*\n\n"
             image_response += "✨ *These images should give you a great preview of what to expect!*"
             return image_response
->>>>>>> 2b9e787fe01b22839e1c9dc9bbc6b0802e2e43c9
         except Exception as e:
             return f"🖼️ Error while searching for images: {str(e)}"
+
+    # Voice Assistant Tools
+    async def voice_speak(self, text: str) -> str:
+        """Speak the given text aloud. Input is the text to speak."""
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.voice_assistant.speak, text, False)
+        return f"Spoke: {text[:50]}..."
+    
+    async def voice_listen(self, timeout: int = 5) -> str:
+        """Listen for voice input and return transcribed text. 
+        Optional timeout parameter (default 5 seconds)."""
+        loop = asyncio.get_event_loop()
+        text = await loop.run_in_executor(None, self.voice_assistant.listen, timeout, 10)
+        return text or "No speech detected"
