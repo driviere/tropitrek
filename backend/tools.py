@@ -489,15 +489,15 @@ Please create a comprehensive itinerary that this traveler can actually use duri
             if not results:
                 return f"🖼️ No images found for '{query}'. Try a different search term like 'Caribbean beach' or 'tropical island'."
             
-            # Format response with images
-            image_response = f"🖼️ **Here are some beautiful images of {query}:**\n\n"
+            # Extract just the image URLs and return them as a simple list
+            image_urls = []
+            image_descriptions = []
             
             for i, image in enumerate(results[:count], 1):
                 # Get image URLs (using regular size for better loading)
                 image_url = image['urls']['regular']
                 alt_description = image.get('alt_description', query)
                 photographer = image['user']['name']
-                photographer_url = image['user']['links']['html']
                 
                 # Clean and validate the image URL
                 if not image_url or not image_url.startswith('http'):
@@ -508,19 +508,17 @@ Please create a comprehensive itinerary that this traveler can actually use duri
                 logger.info(f"Image {i} URL: {image_url}")
                 logger.info(f"Image {i} Alt: {alt_description}")
                 
-                # Clean alt text for markdown (remove problematic characters)
-                clean_alt = (alt_description or query).replace('[', '').replace(']', '').replace('(', '').replace(')', '')
-                
-                # Add image with markdown format - ensure proper spacing and formatting
-                image_response += f"**{i}. {clean_alt}**\n\n"
-                image_response += f"![{clean_alt}]({image_url})\n\n"
-                image_response += f"*Photo by [{photographer}]({photographer_url}) on Unsplash*\n\n"
+                image_urls.append(image_url)
+                image_descriptions.append(f"{alt_description} (Photo by {photographer})")
             
-            image_response += "✨ *These images should give you a great preview of what to expect at your destination!*"
+            # Return a simple response with just the URLs for the agent to use
+            urls_text = "\n".join(image_urls)
+            
+            response = f"Found {len(image_urls)} beautiful images of {query}. Here are the image URLs:\n\n{urls_text}\n\nThese images showcase the natural beauty and attractions of the destination."
             
             logger.info(f"Successfully found {len(results)} images for query: {query}")
-            logger.info(f"Image response being returned: {image_response}")
-            return image_response
+            logger.info(f"Returning image URLs to agent: {image_urls}")
+            return response
             
         except requests.exceptions.Timeout:
             logger.error(f"Timeout while searching for images: {query}")
