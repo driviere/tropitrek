@@ -209,22 +209,16 @@ Traveler Details:
             data = response.json()
             results = data.get('results', [])
             if not results:
-<<<<<<< HEAD
                 return f"🖼️ No images found for '{query}'. Try a different search term like 'Caribbean beach' or 'tropical island'."
             
             # Extract just the image URLs and return them as a simple list
             image_urls = []
             image_descriptions = []
             
-=======
-                return f"🖼️ No images found for '{query}'."
-            image_response = f"🖼️ **Here are some beautiful images of {query}:**\n\n"
->>>>>>> 2b9e787fe01b22839e1c9dc9bbc6b0802e2e43c9
             for i, image in enumerate(results[:count], 1):
                 image_url = image['urls']['regular']
                 alt_description = image.get('alt_description', query)
                 photographer = image['user']['name']
-<<<<<<< HEAD
                 
                 # Clean and validate the image URL
                 if not image_url or not image_url.startswith('http'):
@@ -255,13 +249,5 @@ Traveler Details:
             logger.error(f"Request error while searching for images: {e}")
             return f"🖼️ There was a connection issue while searching for images. Please check your internet connection and try again."
             
-=======
-                photographer_url = image['user']['links']['html']
-                image_response += f"**{i}. {alt_description or query}**\n"
-                image_response += f"![{alt_description or query}]({image_url})\n"
-                image_response += f"*Photo by [{photographer}]({photographer_url}) on Unsplash*\n\n"
-            image_response += "✨ *These images should give you a great preview of what to expect!*"
-            return image_response
->>>>>>> 2b9e787fe01b22839e1c9dc9bbc6b0802e2e43c9
         except Exception as e:
             return f"🖼️ Error while searching for images: {str(e)}"
