@@ -13,6 +13,7 @@ export interface Message {
   timestamp: Date;
   pdfId?: string;
   pdfGenerated?: boolean;
+  onPdfPreview?: (pdfId: string, content: string) => void;
 }
 
 export interface UserInputProps {

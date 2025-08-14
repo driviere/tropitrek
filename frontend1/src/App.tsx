@@ -4,6 +4,7 @@ import type { Message } from "./lib/types";
 import EmptyState from "./components/EmptyState";
 import ChatMessages from "./components/ChatMessages";
 import UserInput from "./components/UserInput";
+import PdfPreviewModal from "./components/PdfPreviewModal";
 import { chatAPI } from "./lib/api";
 import { toast, Toaster } from "sonner";
 
@@ -13,6 +14,21 @@ const ChatInterface: React.FC = () => {
   const [inputValue, setInputValue] = useState("");
   const [sessionId, setSessionId] = useState<string>("");
   const [availablePdfs, setAvailablePdfs] = useState<{[key: string]: string}>({});
+  
+  // PDF Preview Modal state
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    pdfId: string;
+    content: string;
+    travelerName: string;
+    destination: string;
+  }>({
+    isOpen: false,
+    pdfId: '',
+    content: '',
+    travelerName: '',
+    destination: ''
+  });
 
   // Check backend health on component mount
   useEffect(() => {
@@ -47,6 +63,55 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  const handlePdfPreview = (pdfId: string, content: string) => {
+    // Extract traveler name and destination from content
+    const lines = content.split('\n');
+    let travelerName = 'Traveler';
+    let destination = 'Caribbean';
+    
+    // Look for traveler and destination info in the content
+    for (const line of lines) {
+      if (line.includes('Traveler:') || line.includes('**Traveler:**')) {
+        travelerName = line.replace(/\*\*/g, '').replace('Traveler:', '').trim();
+      }
+      if (line.includes('Destination:') || line.includes('**Destination:**')) {
+        destination = line.replace(/\*\*/g, '').replace('Destination:', '').trim();
+      }
+    }
+    
+    setPreviewModal({
+      isOpen: true,
+      pdfId,
+      content,
+      travelerName,
+      destination
+    });
+  };
+
+  const handleClosePreview = () => {
+    setPreviewModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleSaveEdits = async (pdfId: string, editedContent: string) => {
+    try {
+      // Here you would typically send the edited content to the backend
+      // For now, we'll just update the message content locally
+      setMessages(prev => prev.map(msg => 
+        msg.pdfId === pdfId 
+          ? { ...msg, content: editedContent }
+          : msg
+      ));
+      
+      // Update the preview modal content
+      setPreviewModal(prev => ({ ...prev, content: editedContent }));
+      
+      toast.success("✅ Your itinerary has been updated!");
+    } catch (error) {
+      console.error('Error saving edits:', error);
+      toast.error("❌ Failed to save changes. Please try again.");
+    }
+  };
+
   const handleSendMessage = async (content: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -76,7 +141,8 @@ const ChatInterface: React.FC = () => {
         sender: "ai",
         timestamp: new Date(),
         pdfId: response.pdf_id,
-        pdfGenerated: response.pdf_generated
+        pdfGenerated: response.pdf_generated,
+        onPdfPreview: handlePdfPreview
       };
 
       setMessages((prev) => [...prev, aiMessage]);
@@ -148,6 +214,18 @@ const ChatInterface: React.FC = () => {
           onChange={setInputValue}
         />
       </div>
+
+      {/* PDF Preview Modal */}
+      <PdfPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={handleClosePreview}
+        pdfContent={previewModal.content}
+        pdfId={previewModal.pdfId}
+        travelerName={previewModal.travelerName}
+        destination={previewModal.destination}
+        onDownload={handlePdfDownload}
+        onSaveEdits={handleSaveEdits}
+      />
 
       <style jsx>{`
         @keyframes slideUp {

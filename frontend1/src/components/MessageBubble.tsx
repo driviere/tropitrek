@@ -174,45 +174,47 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-800">Your Itinerary PDF is Ready!</p>
-                  <p className="text-xs text-gray-600">Click to download your complete travel plan</p>
+                  <p className="text-xs text-gray-600">Preview and edit before downloading</p>
                 </div>
               </div>
-              <button
-                onClick={() => onPdfDownload(message.pdfId!)}
-                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-green-500 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-green-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => message.onPdfPreview?.(message.pdfId!, message.content)}
+                  className="inline-flex items-center px-3 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Download PDF
-              </button>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Preview
+                </button>
+                <button
+                  onClick={() => onPdfDownload(message.pdfId!)}
+                  className="inline-flex items-center px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Download
+                </button>
+              </div>
             </div>
             
-            {/* Alternative direct link option */}
+            {/* Helpful tip */}
             <div className="mt-2 pt-2 border-t border-blue-200">
               <p className="text-xs text-gray-600">
-                💡 <strong>Tip:</strong> Right-click the download button and select "Save link as..." to save directly to your preferred location.
+                💡 <strong>Tip:</strong> Use Preview to review and edit your itinerary before downloading the final PDF.
               </p>
-              <a
-                href={`http://localhost:8000/download/${message.pdfId}`}
-                download
-                className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800 underline mt-1"
-              >
-                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-                Direct download link
-              </a>
             </div>
           </div>
         )}
