@@ -68,8 +68,11 @@ class TropicTrekToolkit(Toolkit):
             )
             if weather_info:
                 itinerary_content = f"{weather_info}\n\n{itinerary_content}"
+            # Generate current date for PDF
+            current_date = datetime.datetime.now().strftime("%B %d, %Y")
+            
             pdf_filename = await self._create_pdf(
-                itinerary_content, traveler_name, destination, days, travel_style
+                itinerary_content, traveler_name, destination, days, travel_style, current_date
             )
             # Create download URL for the PDF
             download_url = f"http://localhost:8000/download-pdf/{pdf_filename}"
@@ -97,7 +100,10 @@ Your complete itinerary has been saved as a PDF! Click the link above to downloa
         self, destination: str, traveler_name: str, travel_style: str, 
         days: int, interests: str, budget: str
     ) -> str:
-        system_prompt = """
+        # Generate current date for the prompt
+        current_date = datetime.datetime.now().strftime("%B %d, %Y")
+        
+        system_prompt = f"""
 You are an expert travel planner specializing in creating simple, tabular travel itineraries for Caribbean destinations.
 
 Create itineraries in a clean, structured format that will be converted to professional PDF tables.
@@ -105,12 +111,12 @@ Create itineraries in a clean, structured format that will be converted to profe
 Use this exact structure for the itinerary content:
 
 TRAVELER INFORMATION
-Name: [Traveler Name]
-Destination: [Location]
-Duration: [X] days
-Travel Style: [Style]
-Budget: [Budget Level]
-Generated: [Current Date]
+Name: {traveler_name}
+Destination: {destination.title()}
+Duration: {days} days
+Travel Style: {travel_style}
+Budget: {budget.title()}
+Generated: {current_date}
 
 ITINERARY SCHEDULE
 Day 1 - [Theme/Focus]
@@ -159,7 +165,7 @@ Traveler Details:
             return f"Error generating detailed itinerary: {str(e)}"
 
     async def _create_pdf(
-        self, content: str, traveler_name: str, destination: str, days: int, travel_style: str
+        self, content: str, traveler_name: str, destination: str, days: int, travel_style: str, current_date: str
     ) -> str:
         from reportlab.platypus import Table, TableStyle
         from reportlab.lib import colors
@@ -209,7 +215,7 @@ Traveler Details:
             'Destination': destination.title(),
             'Duration': f'{days} days',
             'Travel Style': travel_style,
-            'Generated': datetime.datetime.now().strftime("%B %d, %Y")
+            'Generated': current_date
         }
         
         for line in lines:
@@ -406,10 +412,35 @@ Traveler Details:
                 ['IMPORTANT INFORMATION', '']
             ]
             
-            for key, value in important_info.items():
-                info_data.append([key, value])
+            # Create paragraph style for table content
+            info_style = ParagraphStyle(
+                'InfoStyle',
+                parent=styles['Normal'],
+                fontSize=10,
+                fontName='Helvetica',
+                leading=12,
+                leftIndent=3,
+                rightIndent=3,
+                wordWrap='CJK'
+            )
             
-            info_table = Table(info_data, colWidths=[2*inch, 3.5*inch])
+            key_style = ParagraphStyle(
+                'KeyStyle',
+                parent=styles['Normal'],
+                fontSize=10,
+                fontName='Helvetica-Bold',
+                leading=12,
+                leftIndent=3,
+                rightIndent=3
+            )
+            
+            for key, value in important_info.items():
+                # Wrap both key and value in Paragraph objects for proper text wrapping
+                key_para = Paragraph(key, key_style)
+                value_para = Paragraph(value, info_style)
+                info_data.append([key_para, value_para])
+            
+            info_table = Table(info_data, colWidths=[1.8*inch, 3.7*inch])
             info_table.setStyle(TableStyle([
                 # Header row
                 ('BACKGROUND', (0, 0), (1, 0), HexColor('#1E3A8A')),
@@ -421,13 +452,10 @@ Traveler Details:
                 
                 # Data rows
                 ('BACKGROUND', (0, 1), (1, -1), HexColor('#F8FAFC')),
-                ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
-                ('FONTNAME', (1, 1), (1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (1, -1), 10),
                 ('GRID', (0, 0), (1, -1), 1, HexColor('#E5E7EB')),
-                ('VALIGN', (0, 0), (1, -1), 'MIDDLE'),
-                ('LEFTPADDING', (0, 0), (1, -1), 10),
-                ('RIGHTPADDING', (0, 0), (1, -1), 10),
+                ('VALIGN', (0, 0), (1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (1, -1), 8),
                 ('TOPPADDING', (0, 0), (1, -1), 8),
                 ('BOTTOMPADDING', (0, 0), (1, -1), 8),
             ]))
