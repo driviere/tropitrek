@@ -66,8 +66,17 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                   imageUrls.push(match[0]);
                 }
                 
+                // Extract PDF download URLs from the message content
+                const pdfUrls = [];
+                const pdfRegex = /http:\/\/localhost:8000\/download-pdf\/[^\s]+\.pdf/g;
+                let pdfMatch;
+                while ((pdfMatch = pdfRegex.exec(message.content)) !== null) {
+                  pdfUrls.push(pdfMatch[0]);
+                }
+                
                 if (process.env.NODE_ENV === 'development') {
                   console.log('Found image URLs:', imageUrls);
+                  console.log('Found PDF URLs:', pdfUrls);
                 }
                 
                 const elements = [];
@@ -119,10 +128,55 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                   );
                 }
                 
+                // Add PDF download links if found
+                if (pdfUrls.length > 0) {
+                  elements.push(
+                    <div key="pdf-links" className="mb-4">
+                      {pdfUrls.map((pdfUrl, pdfIndex) => {
+                        const filename = pdfUrl.split('/').pop() || 'itinerary.pdf';
+                        return (
+                          <div key={`pdf-${pdfIndex}`} className="my-3 p-3 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
+                                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-800">📄 Your Itinerary PDF</p>
+                                  <p className="text-xs text-gray-600">{filename}</p>
+                                </div>
+                              </div>
+                              <a
+                                href={pdfUrl}
+                                download
+                                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-medium rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                              >
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Download PDF
+                              </a>
+                            </div>
+                            <div className="mt-2 pt-2 border-t border-blue-200">
+                              <p className="text-xs text-gray-600">
+                                🌴 <strong>Ready for your Caribbean adventure!</strong> Click to download your complete travel itinerary.
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+                
                 // Add text content
                 message.content.split('\n').forEach((line, index) => {
-                  // Skip lines that contain image URLs or markdown
-                  if (line.includes('https://images.unsplash.com/') || line.match(/!\[([^\]]*)\]\(([^)]+)\)/)) {
+                  // Skip lines that contain image URLs, PDF URLs, or markdown
+                  if (line.includes('https://images.unsplash.com/') || 
+                      line.includes('http://localhost:8000/download-pdf/') ||
+                      line.match(/!\[([^\]]*)\]\(([^)]+)\)/)) {
                     return;
                   }
                   

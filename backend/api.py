@@ -248,6 +248,34 @@ async def download_pdf(pdf_id: str):
         logger.error(f"Error downloading PDF {pdf_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to download PDF")
 
+@app.get("/download-pdf/{filename}")
+async def download_pdf_by_filename(filename: str):
+    """
+    Download endpoint for PDF files by filename
+    """
+    try:
+        # Security check: ensure filename doesn't contain path traversal
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(status_code=400, detail="Invalid filename")
+        
+        # Check if file exists in current directory
+        if not os.path.exists(filename):
+            raise HTTPException(status_code=404, detail="PDF file not found")
+        
+        logger.info(f"Serving PDF download by filename: {filename}")
+        
+        return FileResponse(
+            path=filename,
+            filename=filename,
+            media_type="application/pdf"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading PDF {filename}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to download PDF")
+
 @app.get("/pdfs")
 async def list_pdfs():
     """

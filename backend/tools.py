@@ -71,8 +71,11 @@ class TropicTrekToolkit(Toolkit):
             pdf_filename = await self._create_pdf(
                 itinerary_content, traveler_name, destination, days, travel_style
             )
+            # Create download URL for the PDF
+            download_url = f"http://localhost:8000/download-pdf/{pdf_filename}"
+            
             return f"""
-🌴 **Itinerary Created Successfully!** 🌴
+🌴 **Your {destination.title()} Itinerary is Ready!** 🌴
 
 **Traveler:** {traveler_name}
 **Destination:** {destination.title()}
@@ -80,11 +83,11 @@ class TropicTrekToolkit(Toolkit):
 **Style:** {travel_style}
 **Budget:** {budget.title()}
 
-📄 **PDF Generated:** `{pdf_filename}`
+{itinerary_content}
 
-Your personalized travel itinerary is ready! The PDF includes detailed day-by-day planning, local recommendations, and practical travel information.
+📄 **PDF Download Link:** {download_url}
 
-*Download your complete itinerary PDF to take with you on your adventure!* 🏝️
+Your complete itinerary has been saved as a PDF! Click the link above to download and take it with you on your Caribbean adventure! 🏝️
             """
         except Exception as e:
             logger.error(f"Error creating itinerary: {e}")
