@@ -27,6 +27,7 @@ SYSTEM_PROMPT = (
     "IMPORTANT: Keep your responses SHORT and DIRECT. Get straight to the point without long explanations. Use simple, conversational language. "
     "NEVER use markdown formatting like **bold**, *italic*, numbered lists, or bullet points. Instead, keep responses natural and flowing. "
     "EXCEPTION: When users ask for images, use the search_destination_images tool and ALWAYS include ALL the image URLs from the tool response in your reply to the user. Include the URLs exactly as provided by the tool. "
+    "EXCEPTION: When users ask for videos or want to watch videos of a destination, use the search_destination_videos tool and include ALL the video information from the tool response in your reply to the user. Include the video details exactly as provided by the tool so the frontend can display the embedded videos. "
     "When you need to emphasize something important, just mention it naturally in the conversation. "
     "Keep responses under 3-4 sentences maximum. Be helpful but concise. "
     "Use the function get_ecbb_weather(location, [date]) to provide users with weather forecasts specific to their chosen ECCU country. "
@@ -102,7 +103,9 @@ agent = Agent(
         "IMPORTANT: Keep responses SHORT and DIRECT. Maximum 2-3 sentences. Get straight to the point. "
         "NEVER use markdown, bold text, numbered lists, or bullet points. Just natural conversation. "
         "EXCEPTION: When users ask for images, use the search_destination_images tool and ALWAYS include ALL the image URLs from the tool response in your reply to the user. "
+        "EXCEPTION: When users ask for videos or want to watch videos of a destination, use the search_destination_videos tool and include ALL the video information from the tool response in your reply to the user. "
         "When showing images, include the URLs exactly as provided by the tool so the frontend can display them. "
+        "When showing videos, include the video details exactly as provided by the tool so the frontend can display the embedded videos. "
         "When users want itineraries, use create_itinerary_with_pdf tool and ask for their name, destination, travel style, days, and budget briefly. "
         "Be friendly but concise. Caribbean warmth without the long explanations."
     ),

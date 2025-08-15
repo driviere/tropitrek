@@ -22,7 +22,8 @@ class TropicTrekToolkit(Toolkit):
             tools=[
                 self.create_itinerary_with_pdf,
                 self.search_destination_images,
-                self.get_ecbb_weather
+                self.get_ecbb_weather,
+                self.search_destination_videos
             ],
             **kwargs
         )
@@ -32,6 +33,7 @@ class TropicTrekToolkit(Toolkit):
         )
         self.unsplash_access_key = os.getenv('UNSPLASH_ACCESS_KEY')
         self.openweather_api_key = os.getenv('OPENWEATHER_API_KEY')
+        self.youtube_api_key = os.getenv('YOUTUBE_API_KEY')
 
     async def get_ecbb_weather(self, location: str, target_date: str = None) -> str:
         try:
@@ -195,6 +197,19 @@ Traveler Details:
             alignment=1,
             fontName='Helvetica-Bold'
         )
+        
+        # Add logo if it exists
+        logo_path = os.path.join("frontend1", "public", "logo.png")
+        if os.path.exists(logo_path):
+            from reportlab.platypus import Image
+            try:
+                # Create logo image with proper sizing
+                logo = Image(logo_path, width=1*inch, height=1*inch)
+                logo.hAlign = 'CENTER'
+                story.append(logo)
+                story.append(Spacer(1, 10))
+            except Exception as e:
+                logger.warning(f"Could not add logo to PDF: {e}")
         
         # Header
         story.append(Paragraph("Travel Itinerary", title_style))
@@ -541,3 +556,100 @@ Traveler Details:
             
         except Exception as e:
             return f"🖼️ Error while searching for images: {str(e)}"
+
+    async def search_destination_videos(self, query: str, count: int = 3) -> str:
+        """Search for YouTube videos about travel destinations"""
+        logger.info(f"Searching for videos: {query}")
+        
+        if not self.youtube_api_key:
+            return "🎥 Video search is currently unavailable. Please configure the YouTube API key."
+        
+        try:
+            count = min(count, 10)  # Limit to max 10 videos
+            
+            # YouTube Data API v3 search endpoint
+            url = "https://www.googleapis.com/youtube/v3/search"
+            params = {
+                'part': 'snippet',
+                'q': f"{query} travel guide destination",
+                'type': 'video',
+                'maxResults': count,
+                'order': 'relevance',
+                'videoDuration': 'medium',  # 4-20 minutes
+                'videoDefinition': 'high',
+                'key': self.youtube_api_key
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code != 200:
+                logger.error(f"YouTube API error: {response.status_code} - {response.text}")
+                return f"🎥 Sorry, I couldn't fetch videos for '{query}' right now. Please try again later."
+            
+            data = response.json()
+            items = data.get('items', [])
+            
+            if not items:
+                return f"🎥 No videos found for '{query}'. Try a different search term like 'Caribbean travel' or 'tropical vacation'."
+            
+            videos = []
+            
+            for item in items:
+                video_id = item['id']['videoId']
+                snippet = item['snippet']
+                title = snippet['title']
+                description = snippet['description']
+                channel_title = snippet['channelTitle']
+                published_at = snippet['publishedAt']
+                thumbnail_url = snippet['thumbnails']['medium']['url']
+                
+                # Create YouTube watch URL
+                video_url = f"https://www.youtube.com/watch?v={video_id}"
+                
+                # Create embed URL for frontend
+                embed_url = f"https://www.youtube.com/embed/{video_id}"
+                
+                # Clean description (first 150 characters)
+                clean_description = description.replace('\n', ' ').strip()
+                if len(clean_description) > 150:
+                    clean_description = clean_description[:150] + "..."
+                
+                video_info = {
+                    'title': title,
+                    'description': clean_description,
+                    'channel': channel_title,
+                    'video_url': video_url,
+                    'embed_url': embed_url,
+                    'thumbnail_url': thumbnail_url,
+                    'published_at': published_at
+                }
+                
+                videos.append(video_info)
+                
+                logger.info(f"Found video: {title} by {channel_title}")
+            
+            # Return only embed URLs for the frontend to display
+            embed_urls = [video['embed_url'] for video in videos]
+            embed_urls_text = "\n".join(embed_urls)
+            
+            response_text = f"""Here are some videos for you to explore the beautiful beaches of {query}!
+
+{embed_urls_text}
+
+These videos will help you explore and visualize your destination before your trip!"""
+            
+            logger.info(f"Successfully found {len(videos)} videos for query: {query}")
+            logger.info(f"Returning embed URLs: {embed_urls}")
+            return response_text
+            
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout while searching for videos: {query}")
+            return f"🎥 The video search timed out. Please try again with a simpler search term."
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error while searching for videos: {e}")
+            return f"🎥 There was a connection issue while searching for videos. Please check your internet connection and try again."
+            
+        except Exception as e:
+            logger.error(f"Error while searching for videos: {e}")
+            return f"🎥 Error while searching for videos: {str(e)}"

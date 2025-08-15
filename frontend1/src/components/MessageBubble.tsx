@@ -73,10 +73,19 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                 while ((pdfMatch = pdfRegex.exec(message.content)) !== null) {
                   pdfUrls.push(pdfMatch[0]);
                 }
+
+                // Extract YouTube embed URLs from the message content
+                const videoEmbedUrls = [];
+                const videoEmbedRegex = /https:\/\/www\.youtube\.com\/embed\/[^\s]+/g;
+                let videoMatch;
+                while ((videoMatch = videoEmbedRegex.exec(message.content)) !== null) {
+                  videoEmbedUrls.push(videoMatch[0]);
+                }
                 
                 if (process.env.NODE_ENV === 'development') {
                   console.log('Found image URLs:', imageUrls);
                   console.log('Found PDF URLs:', pdfUrls);
+                  console.log('Found video embed URLs:', videoEmbedUrls);
                 }
                 
                 const elements = [];
@@ -171,12 +180,44 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                   );
                 }
                 
+                // Add YouTube videos if found
+                if (videoEmbedUrls.length > 0) {
+                  elements.push(
+                    <div key="videos" className="mb-4">
+                      <div className="space-y-3">
+                        {videoEmbedUrls.map((embedUrl, videoIndex) => (
+                          <div key={`video-${videoIndex}`} className="relative aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
+                            <iframe
+                              src={embedUrl}
+                              title={`Caribbean destination video ${videoIndex + 1}`}
+                              className="w-full h-full"
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                
                 // Add text content
                 message.content.split('\n').forEach((line, index) => {
-                  // Skip lines that contain image URLs, PDF URLs, or markdown
+                  // Skip lines that contain image URLs, PDF URLs, video URLs, or video information
                   if (line.includes('https://images.unsplash.com/') || 
                       line.includes('http://localhost:8000/download-pdf/') ||
-                      line.match(/!\[([^\]]*)\]\(([^)]+)\)/)) {
+                      line.includes('https://www.youtube.com/watch') ||
+                      line.includes('https://www.youtube.com/embed') ||
+                      line.includes('https://i.ytimg.com/') ||
+                      line.match(/!\[([^\]]*)\]\(([^)]+)\)/) ||
+                      line.match(/\*\*\d+\.\s*[^*]+\*\*/) ||
+                      line.includes('Channel:') ||
+                      line.includes('Description:') ||
+                      line.includes('Watch:') ||
+                      line.includes('Embed:') ||
+                      line.includes('Thumbnail:') ||
+                      line.trim().startsWith('**') && line.includes('**')) {
                     return;
                   }
                   
