@@ -11,16 +11,14 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
 
   return (
     <div
-      className={`flex ${
-        isUser ? "justify-end" : "justify-start"
-      } mb-4 animate-slideUp`}
+      className={`flex ${isUser ? "justify-end" : "justify-start"
+        } mb-4 animate-slideUp`}
     >
       <div
-        className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-          isUser
+        className={`max-w-[80%] px-4 py-3 rounded-2xl ${isUser
             ? "bg-blue-500 text-white rounded-br-sm"
             : "bg-white text-gray-800 border border-gray-200 rounded-bl-md"
-        } shadow-sm`}
+          } shadow-sm`}
       >
         {isUser ? (
           <p className="text-sm leading-relaxed">{message.content}</p>
@@ -28,7 +26,7 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
           <div className="text-sm leading-relaxed flex gap-3">
             <img
               src="/bot-icon.png"
-              alt="TropicTrek AI"
+              alt="Trekki"
               className="w-8 h-8 object-contain flex-shrink-0 mt-1"
             />
             <div className="flex-1">
@@ -41,15 +39,15 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                   const testLine = "![beach view](https://images.unsplash.com/photo-1635450737602-4522ad50351e)";
                   const testMatch = testLine.match(/!\[([^\]]*)\]\(([^)]+)\)/);
                   console.log('Test regex match:', testMatch);
-                  
+
                   // Check if message contains any image markdown
                   const hasImageMarkdown = message.content.includes('![');
                   console.log('Message contains image markdown:', hasImageMarkdown);
-                  
+
                   // For testing: if this is an AI message about images, let's see what we got
                   if (message.content.toLowerCase().includes('image') || message.content.toLowerCase().includes('beach')) {
                     console.log('🔍 This message mentions images/beach. Full content:', message.content);
-                    
+
                     // Test if we can manually inject an image for testing
                     if (message.content.includes('Here are some beautiful images')) {
                       console.log('🧪 This looks like an image response, but no markdown detected');
@@ -57,7 +55,7 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                     }
                   }
                 }
-                
+
                 // Extract all image URLs from the message content using regex
                 const imageUrls = [];
                 const imageRegex = /https:\/\/images\.unsplash\.com\/[^\s)]+/g;
@@ -65,7 +63,7 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                 while ((match = imageRegex.exec(message.content)) !== null) {
                   imageUrls.push(match[0]);
                 }
-                
+
                 // Extract PDF download URLs from the message content
                 const pdfUrls = [];
                 const pdfRegex = /http:\/\/localhost:8000\/download-pdf\/[^\s]+\.pdf/g;
@@ -81,15 +79,15 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                 while ((videoMatch = videoEmbedRegex.exec(message.content)) !== null) {
                   videoEmbedUrls.push(videoMatch[0]);
                 }
-                
+
                 if (process.env.NODE_ENV === 'development') {
                   console.log('Found image URLs:', imageUrls);
                   console.log('Found PDF URLs:', pdfUrls);
                   console.log('Found video embed URLs:', videoEmbedUrls);
                 }
-                
+
                 const elements = [];
-                
+
                 // Add images if found
                 if (imageUrls.length > 0) {
                   elements.push(
@@ -106,7 +104,7 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                                 console.error('Image failed to load:', imageUrl);
                                 const target = e.currentTarget;
                                 target.style.display = 'none';
-                                
+
                                 // Show fallback
                                 const fallback = target.nextElementSibling as HTMLElement;
                                 if (fallback && fallback.classList.contains('image-fallback')) {
@@ -117,7 +115,7 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                                 console.log('✅ Image loaded successfully:', imageUrl);
                               }}
                             />
-                            <div 
+                            <div
                               className="image-fallback bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500"
                               style={{ display: 'none' }}
                             >
@@ -136,7 +134,7 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                     </div>
                   );
                 }
-                
+
                 // Add PDF download links if found
                 if (pdfUrls.length > 0) {
                   elements.push(
@@ -179,7 +177,7 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                     </div>
                   );
                 }
-                
+
                 // Add YouTube videos if found
                 if (videoEmbedUrls.length > 0) {
                   elements.push(
@@ -201,56 +199,56 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                     </div>
                   );
                 }
-                
+
                 // Add text content
                 message.content.split('\n').forEach((line, index) => {
                   // Skip lines that contain image URLs, PDF URLs, video URLs, or video information
-                  if (line.includes('https://images.unsplash.com/') || 
-                      line.includes('http://localhost:8000/download-pdf/') ||
-                      line.includes('https://www.youtube.com/watch') ||
-                      line.includes('https://www.youtube.com/embed') ||
-                      line.includes('https://i.ytimg.com/') ||
-                      line.match(/!\[([^\]]*)\]\(([^)]+)\)/) ||
-                      line.match(/\*\*\d+\.\s*[^*]+\*\*/) ||
-                      line.includes('Channel:') ||
-                      line.includes('Description:') ||
-                      line.includes('Watch:') ||
-                      line.includes('Embed:') ||
-                      line.includes('Thumbnail:') ||
-                      line.trim().startsWith('**') && line.includes('**')) {
+                  if (line.includes('https://images.unsplash.com/') ||
+                    line.includes('http://localhost:8000/download-pdf/') ||
+                    line.includes('https://www.youtube.com/watch') ||
+                    line.includes('https://www.youtube.com/embed') ||
+                    line.includes('https://i.ytimg.com/') ||
+                    line.match(/!\[([^\]]*)\]\(([^)]+)\)/) ||
+                    line.match(/\*\*\d+\.\s*[^*]+\*\*/) ||
+                    line.includes('Channel:') ||
+                    line.includes('Description:') ||
+                    line.includes('Watch:') ||
+                    line.includes('Embed:') ||
+                    line.includes('Thumbnail:') ||
+                    line.trim().startsWith('**') && line.includes('**')) {
                     return;
                   }
-                  
+
                   // Regular text processing with blue emphasis
                   const processLine = (text: string) => {
                     // Look for words that should be emphasized (destinations, important terms)
                     const emphasizedWords = [
-                      'Dominica', 'Grenada', 'St. Lucia', 'St. Kitts', 'Nevis', 'Antigua', 'Barbuda', 
+                      'Dominica', 'Grenada', 'St. Lucia', 'St. Kitts', 'Nevis', 'Antigua', 'Barbuda',
                       'St. Vincent', 'Grenadines', 'Anguilla', 'Caribbean', 'ECCU',
                       'Adventure Seeker', 'Cultural Explorer', 'Relaxation', 'budget', 'moderate', 'luxury',
                       'itinerary', 'PDF', 'weather', 'festival', 'beach', 'waterfall', 'rainforest'
                     ];
-                    
+
                     let processedText = text;
                     emphasizedWords.forEach(word => {
                       const regex = new RegExp(`\\b${word}\\b`, 'gi');
                       processedText = processedText.replace(regex, `<span class="text-blue-600 font-medium">${word}</span>`);
                     });
-                    
+
                     return processedText;
                   };
 
                   elements.push(
-                    <div 
-                      key={`text-${index}`} 
+                    <div
+                      key={`text-${index}`}
                       className="mb-1"
-                      dangerouslySetInnerHTML={{ 
-                        __html: line ? processLine(line) : '\u00A0' 
+                      dangerouslySetInnerHTML={{
+                        __html: line ? processLine(line) : '\u00A0'
                       }}
                     />
                   );
                 });
-                
+
                 return elements;
               })()}
             </div>
@@ -304,7 +302,7 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
                 </button>
               </div>
             </div>
-            
+
             {/* Helpful tip */}
             <div className="mt-2 pt-2 border-t border-blue-200">
               <p className="text-xs text-gray-600">
@@ -315,9 +313,8 @@ const MessageBubble = ({ message, onPdfDownload }: MessageBubbleProps) => {
         )}
 
         <span
-          className={`text-xs mt-2 block ${
-            isUser ? "opacity-70" : "opacity-50"
-          }`}
+          className={`text-xs mt-2 block ${isUser ? "opacity-70" : "opacity-50"
+            }`}
         >
           {message.timestamp.toLocaleTimeString([], {
             hour: "2-digit",

@@ -7,13 +7,13 @@ const Navbar = () => {
         <div className="w-12 h-12 flex items-center justify-center">
           <img
             src="/TropiTrek logo.png"
-            alt="TropicTrek Logo"
+            alt="Trekki"
             className="w-full h-full object-contain"
           />
         </div>
         {/* <div>
           <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-            TropicTrek
+            Trekki
           </span>
           <p className="text-xs text-gray-500">Caribbean Travel Assistant</p>
         </div> */}

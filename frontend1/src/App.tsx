@@ -13,8 +13,8 @@ const ChatInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [sessionId, setSessionId] = useState<string>("");
-  const [availablePdfs, setAvailablePdfs] = useState<{[key: string]: string}>({});
-  
+  const [availablePdfs, setAvailablePdfs] = useState<{ [key: string]: string }>({});
+
   // PDF Preview Modal state
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
@@ -68,7 +68,7 @@ const ChatInterface: React.FC = () => {
     const lines = content.split('\n');
     let travelerName = 'Traveler';
     let destination = 'Caribbean';
-    
+
     // Look for traveler and destination info in the content
     for (const line of lines) {
       if (line.includes('Traveler:') || line.includes('**Traveler:**')) {
@@ -78,7 +78,7 @@ const ChatInterface: React.FC = () => {
         destination = line.replace(/\*\*/g, '').replace('Destination:', '').trim();
       }
     }
-    
+
     setPreviewModal({
       isOpen: true,
       pdfId,
@@ -96,15 +96,15 @@ const ChatInterface: React.FC = () => {
     try {
       // Here you would typically send the edited content to the backend
       // For now, we'll just update the message content locally
-      setMessages(prev => prev.map(msg => 
-        msg.pdfId === pdfId 
+      setMessages(prev => prev.map(msg =>
+        msg.pdfId === pdfId
           ? { ...msg, content: editedContent }
           : msg
       ));
-      
+
       // Update the preview modal content
       setPreviewModal(prev => ({ ...prev, content: editedContent }));
-      
+
       toast.success("✅ Your itinerary has been updated!");
     } catch (error) {
       console.error('Error saving edits:', error);
@@ -158,7 +158,7 @@ const ChatInterface: React.FC = () => {
 
     } catch (error) {
       console.error("Error calling TropicTrek API:", error);
-      
+
       // Add error message to chat
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -166,7 +166,7 @@ const ChatInterface: React.FC = () => {
         sender: "ai",
         timestamp: new Date(),
       };
-      
+
       setMessages((prev) => [...prev, errorMessage]);
       toast.error("❌ Connection error. Please check if the backend server is running.");
     } finally {
@@ -182,13 +182,13 @@ const ChatInterface: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 transition-colors duration-200">
-      <Toaster 
-        position="top-right" 
-        richColors 
-        closeButton 
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
         duration={4000}
       />
-      
+
       {/* Fixed Navbar */}
       <Navbar />
 
@@ -199,13 +199,13 @@ const ChatInterface: React.FC = () => {
             <EmptyState onPromptSelect={handlePromptSelect} />
           </div>
         ) : (
-          <ChatMessages 
-            messages={messages} 
-            isLoading={isLoading} 
+          <ChatMessages
+            messages={messages}
+            isLoading={isLoading}
             onPdfDownload={handlePdfDownload}
           />
         )}
-        
+
         {/* Fixed Input at bottom */}
         <UserInput
           onSendMessage={handleSendMessage}
