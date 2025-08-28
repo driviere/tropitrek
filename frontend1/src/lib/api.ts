@@ -31,7 +31,7 @@ export const chatAPI = {
 
   async downloadPdf(pdfId: string): Promise<Blob> {
     const response = await fetch(`${API_BASE_URL}/download/${pdfId}`);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to download PDF: ${response.status}`);
     }

@@ -81,6 +81,13 @@ app.add_middleware(
 # Initialize TropicTrek components
 tropictrek_toolkit = TropicTrekToolkit()
 
+# Initialize DuckDuckGo tools with error handling
+try:
+    duckduckgo_tools = DuckDuckGoTools()
+except Exception as e:
+    logger.warning(f"Could not initialize DuckDuckGo tools: {e}")
+    duckduckgo_tools = None
+
 
 # Create OpenRouter model
 openrouter_model = OpenAIChat(
@@ -96,7 +103,7 @@ openrouter_model = OpenAIChat(
 # Initialize agent
 agent = Agent(
     model=openrouter_model,
-    tools=[tropictrek_toolkit, DuckDuckGoTools],
+    tools=[tropictrek_toolkit] + ([duckduckgo_tools] if duckduckgo_tools else []),
     instructions=(
         "ALWAYS search your knowledge base FIRST. "
         "You are TropicTrek, a specialized tourism assistant for Eastern Caribbean Currency Union (ECCU) countries. "
